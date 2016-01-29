@@ -1,0 +1,6 @@
+[package]
+name = "rusty_fit"
+version = "0.1.0"
+authors = ["Jonathan Rothberg <jrothberg@bluebeam.com>"]
+
+[dependencies]
