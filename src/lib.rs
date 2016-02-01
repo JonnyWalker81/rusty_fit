@@ -1,9 +1,11 @@
 extern crate byteorder;
+extern crate chrono;
 use std::io::Read;
 use std::fs;
 use std::path::Path;
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use byteorder::{ByteOrder, BigEndian, LittleEndian, ReadBytesExt};
 use std::collections::HashMap;
+use chrono::*;
 
 struct Decoder {
     file_name: String,
@@ -268,12 +270,33 @@ impl Decoder {
             pos += 3;
         }
 
+        //TODO: Handle pos better
         let data_header = self.fit_buf[pos];
         pos += 1;
         println!("{:#b}", data_header);
 
-        let type_value = self.fit_buf[pos];
-        println!("Type: {}", type_value);
+        let serial_number = LittleEndian::read_u32(&self.fit_buf[pos..]);
+        println!("Serial Number: {}", serial_number);
+        pos += 4;
+
+        let time_created = LittleEndian::read_u32(&self.fit_buf[pos..]);
+        println!("Time Created: {}", time_created);
+
+        let d = UTC.ymd(1989, 12, 31);
+        let sum = d + Duration::seconds(time_created as i64);
+        println!("Date: {}", sum);
+        pos += 4;
+
+        let manufacturer = LittleEndian::read_u16(&self.fit_buf[pos..]);
+        println!("Manf: {}", manufacturer);
+        pos += 2;
+
+        let product = LittleEndian::read_u16(&self.fit_buf[pos..]);
+        println!("Product: {}", product);
+        pos += 2;
+
+        let t = self.fit_buf[pos];
+        println!("Type: {}", t);
     }
 }
 
