@@ -12,11 +12,12 @@ use super::file_id_message::FileIdMessage;
 use super::field_definition::FieldDefinition;
 
 pub struct Decoder {
-    file_name: String,
-    fit_buf: Vec<u8>,
-    header: FitHeader,
-    global_mesage_table: GlobalMessage,
-    file_id_table: FileIdMessage,
+    pub file_name: String,
+    pub fit_buf: Vec<u8>,
+    pub header: FitHeader,
+    pub global_mesage_table: GlobalMessage,
+    pub file_id_table: FileIdMessage,
+    read_pos: u64,
 }
 
 impl Decoder {
@@ -27,16 +28,13 @@ impl Decoder {
             header: FitHeader::default(),
             global_mesage_table: GlobalMessage::new(),
             file_id_table: FileIdMessage::new(),
+            read_pos: 0,
         }
     } 
 
     pub fn decode(&mut self) {
         self.fit_buf = ::read_bin(&self.file_name);
 
-        /*for w in &self.fit_buf {
-            println!("{}", w);
-        }
-        */
         self.decode_header();
         self.decode_records();
     }
@@ -143,6 +141,29 @@ impl Decoder {
 
         let t = self.fit_buf[pos];
         println!("Type: {}", t);
+    }
+
+    fn read_u8(&mut self) -> u8 {
+        let byte = self.fit_buf[self.read_pos as usize];
+        self.read_pos += 1;
+        byte
+    }
+
+    fn read_byte(&mut self) -> u8{
+        let byte = self.fit_buf[self.read_pos as usize];
+        self.read_pos += 1;
+        byte
+    }
+
+    fn read_bytes(&mut self, amount: u32) -> Vec<u8> {
+        let mut result = Vec::new();
+        for _ in 0..amount {
+            let read0 = self.fit_buf[self.read_pos as usize];
+            result.push(read0);
+            self.read_pos += 1;
+        }
+
+        result
     }
 }
 
