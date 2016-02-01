@@ -9,7 +9,8 @@ struct Decoder {
     file_name: String,
     fit_buf: Vec<u8>,
     header: FitHeader,
-    global_mesage_table: GlobalMessage
+    global_mesage_table: GlobalMessage,
+    file_id_table: FileIdMessage,
 }
 
 #[derive(Debug)]
@@ -39,6 +40,10 @@ struct FieldDefinition {
     field_number: u8,
     size: u8,
     base_type_number: u8
+}
+
+struct FileIdMessage {
+    table: HashMap<u8, &'static str>
 }
 
 struct GlobalMessage {
@@ -136,13 +141,44 @@ impl GlobalMessage {
     }
 }
 
+impl FileIdMessage {
+    fn new() -> FileIdMessage {
+        return FileIdMessage {
+            table: FileIdMessage::make_table()
+        }
+    }
+
+    fn get(&self, key: u8) -> &'static str {
+        let result = self.table.get(&key);
+
+        match result {
+            Some(r) => return r,
+            None => panic!("Unrecognized File ID Key: {}", key)
+        };
+    }
+
+    fn make_table() -> HashMap<u8, &'static str> {
+        let mut table = HashMap::new();
+        table.insert(0, "type");
+        table.insert(1, "manufacturer");
+        table.insert(2, "product");
+        table.insert(3, "serial_number");
+        table.insert(4, "time_created");
+        table.insert(5, "number");
+        table.insert(7, "product_name");
+
+        return table;
+    }
+}
+
 impl Decoder {
     pub fn new(file_name: String) -> Decoder {
         return Decoder {
             file_name: file_name,
             fit_buf: Vec::new(),
             header: FitHeader::default(),
-            global_mesage_table: GlobalMessage::new()
+            global_mesage_table: GlobalMessage::new(),
+            file_id_table: FileIdMessage::new(),
         }
     } 
 
@@ -219,14 +255,25 @@ impl Decoder {
 
         let index: usize = 20;
         let fields: usize = num_fields as usize;
+        let mut pos = index;
         for f in 0..fields {
             let current_index: usize = index + (3 * f);
             let field_def_num = self.fit_buf[current_index];
             let size = self.fit_buf[current_index + 1];
             let base_type = self.fit_buf[current_index + 2];
 
-            println!("{}  {}  {}", field_def_num, size, base_type);
+            let field_kind = self.file_id_table.get(field_def_num);
+
+            println!("{}: {}  {}  {}", field_kind, field_def_num, size, base_type);
+            pos += 3;
         }
+
+        let data_header = self.fit_buf[pos];
+        pos += 1;
+        println!("{:#b}", data_header);
+
+        let type_value = self.fit_buf[pos];
+        println!("Type: {}", type_value);
     }
 }
 
