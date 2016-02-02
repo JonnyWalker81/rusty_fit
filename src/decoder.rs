@@ -33,7 +33,7 @@ impl Decoder {
     } 
 
     pub fn decode(&mut self) {
-        self.fit_buf = ::read_bin(&self.file_name);
+        self.fit_buf = super::read_bin(&self.file_name);
 
         self.decode_header();
         self.decode_records();
@@ -75,38 +75,44 @@ impl Decoder {
        println!("{:?}", self.header);
     }
 
-    fn read_header(&self) -> Vec<u8> {
-        let word0 = self.fit_buf[0];
-        let word1 = self.fit_buf[1];
+    fn read_header(&mut self) -> Vec<u8> {
+        //let word0 = self.fit_buf[0];
+        //let word1 = self.fit_buf[1];
 
         let headerVec: Vec<u8> = self.fit_buf.iter().take(14).map(|b| *b).collect();
+        self.read_pos += 14;
 
         return headerVec;
     }
 
-    fn decode_records(&self) {
-        let record_header = self.fit_buf[14];
+    fn decode_records(&mut self) {
+        // let record_header = self.fit_buf[14];
+        let record_header = self.read_u8();
+        self.read_u8(); // read and ignore a since the next byte is reserved
         println!("{:#b}", record_header);
-        let arch = self.fit_buf[16];
+        let arch = self.read_u8();
         println!("{:#b}", arch);
 
-        let global_message_number: u16 = (self.fit_buf[18] as u16) << 8 | (self.fit_buf[17] as u16);
+        let global_message_number: u16 = (self.read_u8() as u16) << 8 | (self.read_u8() as u16);
         println!("Global Message Number: {}", global_message_number);
 
         let global_message = self.global_mesage_table.get(global_message_number);
         println!("Global Message: {}", global_message);
 
-        let num_fields = self.fit_buf[19];
+        let num_fields = self.read_u8();
         println!("Number of Fields: {}", num_fields);
 
         let index: usize = 20;
         let fields: usize = num_fields as usize;
         let mut pos = index;
         for f in 0..fields {
-            let current_index: usize = index + (3 * f);
-            let field_def_num = self.fit_buf[current_index];
-            let size = self.fit_buf[current_index + 1];
-            let base_type = self.fit_buf[current_index + 2];
+            // let current_index: usize = index + (3 * f);
+            // let field_def_num = self.fit_buf[current_index];
+            let field_def_num = self.read_u8();
+            // let size = self.fit_buf[current_index + 1];
+            let size = self.read_u8();
+            // let base_type = self.fit_buf[current_index + 2];
+            let base_type = self.read_u8();
 
             let field_kind = self.file_id_table.get(field_def_num);
 
@@ -115,15 +121,19 @@ impl Decoder {
         }
 
         //TODO: Handle pos better
-        let data_header = self.fit_buf[pos];
+        let data_header = self.read_u8();
         pos += 1;
         println!("{:#b}", data_header);
 
-        let serial_number = LittleEndian::read_u32(&self.fit_buf[pos..]);
+        // let serial_number = LittleEndian::read_u32(&self.fit_buf[pos..]);
+        let mut four_bytes = self.read_bytes(4);
+        let serial_number = LittleEndian::read_u32(&four_bytes);
         println!("Serial Number: {}", serial_number);
         pos += 4;
 
-        let time_created = LittleEndian::read_u32(&self.fit_buf[pos..]);
+        // let time_created = LittleEndian::read_u32(&self.fit_buf[pos..]);
+        four_bytes = self.read_bytes(4);
+        let time_created = LittleEndian::read_u32(&four_bytes);
         println!("Time Created: {}", time_created);
 
         let d = UTC.ymd(1989, 12, 31);
@@ -131,15 +141,20 @@ impl Decoder {
         println!("Date: {}", sum);
         pos += 4;
 
-        let manufacturer = LittleEndian::read_u16(&self.fit_buf[pos..]);
+        // let manufacturer = LittleEndian::read_u16(&self.fit_buf[pos..]);
+        let mut two_bytes = self.read_bytes(2);
+        let manufacturer = LittleEndian::read_u16(&two_bytes);
         println!("Manf: {}", manufacturer);
         pos += 2;
 
-        let product = LittleEndian::read_u16(&self.fit_buf[pos..]);
+        // let product = LittleEndian::read_u16(&self.fit_buf[pos..]);
+        two_bytes = self.read_bytes(2);
+        let product = LittleEndian::read_u16(&two_bytes);
         println!("Product: {}", product);
         pos += 2;
 
-        let t = self.fit_buf[pos];
+        // let t = self.fit_buf[pos];
+        let t = self.read_byte();
         println!("Type: {}", t);
     }
 
