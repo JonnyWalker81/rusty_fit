@@ -11,6 +11,7 @@ mod fit_header;
 mod global_message_table;
 mod file_id_message;
 mod field_definition;
+mod fit_file;
 
 pub fn read_bin<P: AsRef<Path>>(path: P) -> Vec<u8> {
     let mut file = fs::File::open(path).unwrap();
