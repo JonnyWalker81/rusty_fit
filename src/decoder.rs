@@ -11,7 +11,9 @@ use super::global_message_table::GlobalMessage;
 use super::file_id_message::FileIdMessage;
 use super::field_definition::FieldDefinition;
 use super::fit_file::FitFile;
-use super::record_content::RecordContent;
+use super::record_content::{RecordContent, RecordData};
+use super::record_header::RecordHeader;
+use super::definition_message::DefinitionMessage;
 
 pub struct Decoder {
     pub file_name: String,
@@ -97,9 +99,44 @@ impl Decoder {
 
     fn decode_records(&mut self) -> RecordContent {
         let mut record_content = RecordContent::new();
-        let record_header = self.read_u8();
-        self.read_u8(); // read and ignore a since the next byte is reserved
-        println!("{:#b}", record_header);
+        
+        self.decode_message();
+        //TODO: Handle pos better
+        let data_header = self.read_u8();
+        println!("{:#b}", data_header);
+
+        let mut four_bytes = self.read_bytes(4);
+        let serial_number = LittleEndian::read_u32(&four_bytes);
+        println!("Serial Number: {}", serial_number);
+
+        four_bytes = self.read_bytes(4);
+        let time_created = LittleEndian::read_u32(&four_bytes);
+        println!("Time Created: {}", time_created);
+
+        let d = UTC.ymd(1989, 12, 31);
+        let sum = d + Duration::seconds(time_created as i64);
+        println!("Date: {}", sum);
+
+        let mut two_bytes = self.read_bytes(2);
+        let manufacturer = LittleEndian::read_u16(&two_bytes);
+        println!("Manf: {}", manufacturer);
+
+        two_bytes = self.read_bytes(2);
+        let product = LittleEndian::read_u16(&two_bytes);
+        println!("Product: {}", product);
+
+        let t = self.read_byte();
+        println!("Type: {}", t);
+
+        record_content
+    }
+
+    fn decode_message(&mut self) -> Box<RecordData> {
+        let raw_header = self.read_u8();
+        let record_header = RecordHeader::new(raw_header);
+        println!("RecordHeader: {:?}", record_header);
+        self.read_u8(); // read and ignore since the next byte is reserved
+        println!("{:#b}", raw_header);
         let arch = self.read_u8(); //TODO: Handle Endianess better
         println!("{:#b}", arch);
 
@@ -123,34 +160,7 @@ impl Decoder {
             println!("{}: {}  {}  {}", field_kind, field_def_num, size, base_type);
         }
 
-        //TODO: Handle pos better
-        let data_header = self.read_u8();
-        println!("{:#b}", data_header);
-
-        let mut four_bytes = self.read_bytes(4);
-        let serial_number = LittleEndian::read_u32(&four_bytes);
-        println!("Serial Number: {}", serial_number);
-
-        four_bytes = self.read_bytes(4);
-        let time_created = LittleEndian::read_u32(&four_bytes);
-        println!("Time Created: {}", time_created);
-
-        let d = UTC.ymd(1989, 12, 31);
-        let sum = d + Duration::seconds(time_created as i64);
-        println!("Date: {}", sum);
-
-        two_bytes = self.read_bytes(2);
-        let manufacturer = LittleEndian::read_u16(&two_bytes);
-        println!("Manf: {}", manufacturer);
-
-        two_bytes = self.read_bytes(2);
-        let product = LittleEndian::read_u16(&two_bytes);
-        println!("Product: {}", product);
-
-        let t = self.read_byte();
-        println!("Type: {}", t);
-
-        record_content
+        Box::new(DefinitionMessage::new(record_header))
     }
 
     fn read_u8(&mut self) -> u8 {
