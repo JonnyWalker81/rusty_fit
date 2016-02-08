@@ -16,11 +16,14 @@ mod record_content;
 mod record_header;
 mod data_message;
 mod definition_message;
+mod record_datum;
 
 pub fn read_bin<P: AsRef<Path>>(path: P) -> Vec<u8> {
+    println!("Reading .FIT File...");
     let mut file = fs::File::open(path).unwrap();
     let mut file_buf = Vec::new();
     file.read_to_end(&mut file_buf).unwrap();
+    println!("Finishied Reading .FIT File...");
     file_buf
 }
 

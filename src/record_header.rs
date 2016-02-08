@@ -18,4 +18,8 @@ impl RecordHeader {
             local_message_type: lmt
         }
     }
+
+    pub fn is_definition(&self) -> bool {
+        self.message_type == 1
+    }
 }

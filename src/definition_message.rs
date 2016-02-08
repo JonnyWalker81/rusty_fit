@@ -2,12 +2,13 @@ use super::record_content::RecordData;
 use super::record_header::RecordHeader;
 use super::field_definition::FieldDefinition;
 
+#[derive(Debug)]
 pub struct DefinitionMessage {
     header: RecordHeader,
-    architecture: u8,
-    global_message_number: u16,
-    number_of_fields: u8,
-    fields: Vec<FieldDefinition>
+    pub architecture: u8,
+    pub global_message_number: u16,
+    pub number_of_fields: u8,
+    pub fields: Vec<FieldDefinition>
 }
 
 impl DefinitionMessage {
