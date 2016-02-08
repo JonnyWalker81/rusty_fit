@@ -11,6 +11,7 @@ use super::global_message_table::GlobalMessage;
 use super::file_id_message::FileIdMessage;
 use super::field_definition::FieldDefinition;
 use super::fit_file::FitFile;
+use super::record_content::RecordContent;
 
 pub struct Decoder {
     pub file_name: String,
@@ -39,7 +40,8 @@ impl Decoder {
 
         fit_file.header = self.decode_header();
         println!("{:?}", fit_file.header);
-        self.decode_records();
+        let record_content = self.decode_records();
+        fit_file.data = record_content;
 
         fit_file
     }
@@ -71,16 +73,16 @@ impl Decoder {
         let crc: u16 = (header[13] as u16) << 8 | (header[12] as u16);
 
         let mut fit_header = FitHeader::default();
-       fit_header.size = header_size; 
-       fit_header.protocol_version = protocol_version;
-       fit_header.profile_version = full_profile_version;
-       fit_header.fit_str = fit_str;
-       fit_header.data_size = record_size_in_bytes;
-       fit_header.crc = crc;
+        fit_header.size = header_size; 
+        fit_header.protocol_version = protocol_version;
+        fit_header.profile_version = full_profile_version;
+        fit_header.fit_str = fit_str;
+        fit_header.data_size = record_size_in_bytes;
+        fit_header.crc = crc;
 
-       //println!("{:?}", fit_header);
+        //println!("{:?}", fit_header);
 
-       fit_header
+        fit_header
     }
 
     fn read_header(&mut self) -> Vec<u8> {
@@ -93,7 +95,8 @@ impl Decoder {
         return headerVec;
     }
 
-    fn decode_records(&mut self) {
+    fn decode_records(&mut self) -> RecordContent {
+        let mut record_content = RecordContent::new();
         let record_header = self.read_u8();
         self.read_u8(); // read and ignore a since the next byte is reserved
         println!("{:#b}", record_header);
@@ -146,6 +149,8 @@ impl Decoder {
 
         let t = self.read_byte();
         println!("Type: {}", t);
+
+        record_content
     }
 
     fn read_u8(&mut self) -> u8 {
@@ -173,9 +178,9 @@ impl Decoder {
 }
 
 /*fn read_bin<P: AsRef<Path>>(path: P) -> Vec<u8> {
-    let mut file = fs::File::open(path).unwrap();
-    let mut file_buf = Vec::new();
-    file.read_to_end(&mut file_buf).unwrap();
-    file_buf
-}
-*/
+  let mut file = fs::File::open(path).unwrap();
+  let mut file_buf = Vec::new();
+  file.read_to_end(&mut file_buf).unwrap();
+  file_buf
+  }
+  */
