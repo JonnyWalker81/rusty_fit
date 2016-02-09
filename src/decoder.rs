@@ -183,17 +183,35 @@ impl Decoder {
 
         let global_number = definition.global_message_number;
         let global_message = self.global_mesage_table.get(global_number);
+        let mut message_mapping: HashMap<i32, &'static str> = HashMap::new();
         {
-        let message_mapping = self.field_table.get(global_message);
+            println!("Global Message: {}", global_message);
+        message_mapping = self.field_table.get(global_message).clone();
+        }
         println!("Def: {:?}", definition);
         for f in definition.fields {
             let key = f.field_number as i32;
+            println!("Key: {}", key);
+            println!("Message Mapping: {:?}", message_mapping);
             let field_name = message_mapping.get(&key).unwrap();
             println!("{}", field_name);
-        }
+            let read_result = match f.size {
+                1 => self.read_byte() as u32,
+                2 => {
+                    let r = self.read_bytes(2);
+                    Decoder::get_u16(definition.architecture, &r) as u32
+                },
+                4 => {
+                    let r = self.read_bytes(4);
+                    Decoder::get_u32(definition.architecture, &r)
+                },
+                _ => panic!("Unhandled size: {}", f.size)
+            };
+            let mut datum = RecordDatum::new(field_name.to_string(), read_result as i64);
+            data_message.push_datum(datum);
         }
 
-        let mut four_bytes = self.read_bytes(4);
+        /*let mut four_bytes = self.read_bytes(4);
         // let serial_number = LittleEndian::read_u32(&four_bytes);
         let serial_number = Decoder::get_u32(definition.architecture, &four_bytes);
         println!("Serial Number: {}", serial_number);
@@ -238,6 +256,7 @@ impl Decoder {
         println!("Type: {}", t);
         datum = RecordDatum::new(String::from("Type"), t as i64);
         data_message.push_datum(datum);
+        */
 
         println!("DataMessage: {:?}", data_message);
         

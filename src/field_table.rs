@@ -15,7 +15,7 @@ impl FieldTable {
         let result = self.table.get(&key);
         match result {
             Some(r) => r,
-            None => panic!("Unalbe to get field in table: {}", key)
+            None => panic!("Unable to get field in table: {}", key)
         }
     }
 
