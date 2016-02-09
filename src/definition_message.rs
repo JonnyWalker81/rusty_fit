@@ -2,7 +2,7 @@ use super::record_content::RecordData;
 use super::record_header::RecordHeader;
 use super::field_definition::FieldDefinition;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DefinitionMessage {
     header: RecordHeader,
     pub architecture: u8,

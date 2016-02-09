@@ -17,6 +17,8 @@ mod record_header;
 mod data_message;
 mod definition_message;
 mod record_datum;
+mod local_type_table;
+mod field_table;
 
 pub fn read_bin<P: AsRef<Path>>(path: P) -> Vec<u8> {
     println!("Reading .FIT File...");

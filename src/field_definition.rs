@@ -1,9 +1,9 @@
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct FieldDefinition {
-    field_number: u8,
-    size: u8,
-    base_type_number: u8
+    pub field_number: u8,
+    pub size: u8,
+    pub base_type_number: u8
 }
 
 impl FieldDefinition {

@@ -16,6 +16,8 @@ use super::record_header::RecordHeader;
 use super::definition_message::DefinitionMessage;
 use super::data_message::DataMessage;
 use super::record_datum::RecordDatum;
+use super::local_type_table::LocalMessageTable;
+use super::field_table::FieldTable;
 
 pub struct Decoder {
     pub file_name: String,
@@ -23,6 +25,8 @@ pub struct Decoder {
     //pub header: FitHeader,
     pub global_mesage_table: GlobalMessage,
     pub file_id_table: FileIdMessage,
+    local_message_table: LocalMessageTable,
+    field_table: FieldTable,
     read_pos: u64,
 }
 
@@ -34,6 +38,8 @@ impl Decoder {
             //header: FitHeader::default(),
             global_mesage_table: GlobalMessage::new(),
             file_id_table: FileIdMessage::new(),
+            local_message_table: LocalMessageTable::new(),
+            field_table: FieldTable::new(),
             read_pos: 0,
         }
     } 
@@ -102,8 +108,9 @@ impl Decoder {
     fn decode_records(&mut self) -> RecordContent {
         let mut record_content = RecordContent::new();
         
-        for i in 0..2 {
+        for i in 0..3 {
             println!("Loop: {}", i);
+            println!("Current Pos: {}", self.read_pos);
             self.decode_message();
         }
         
@@ -112,7 +119,7 @@ impl Decoder {
 
     fn decode_message(&mut self) -> Box<RecordData> {
         let raw_header = self.read_u8();
-        println!("{:#b}", raw_header);
+        println!("Record Header: {:#b}", raw_header);
         let record_header = RecordHeader::new(raw_header);
         println!("RecordHeader: {:?}", record_header);
         if record_header.is_definition() {
@@ -152,11 +159,15 @@ impl Decoder {
             let field_kind = self.file_id_table.get(field_def_num);
 
             let field_definition = FieldDefinition::new(field_def_num, size, base_type);
+            definition_message.fields.push(field_definition);
 
             println!("{}: {:?}", field_kind, field_definition);
         }
 
         println!("DefinitionMessage: {:?}", definition_message);
+
+        let key = record_header.get_local_type();
+        self.local_message_table.insert(key, definition_message.clone());
 
         Box::new(definition_message)
     }
@@ -167,14 +178,31 @@ impl Decoder {
         // println!("{:#b}", data_header);
 
         let mut data_message = DataMessage::new(record_header);
+        let local_type = record_header.get_local_type();
+        let definition = self.local_message_table.get(local_type);
+
+        let global_number = definition.global_message_number;
+        let global_message = self.global_mesage_table.get(global_number);
+        {
+        let message_mapping = self.field_table.get(global_message);
+        println!("Def: {:?}", definition);
+        for f in definition.fields {
+            let key = f.field_number as i32;
+            let field_name = message_mapping.get(&key).unwrap();
+            println!("{}", field_name);
+        }
+        }
+
         let mut four_bytes = self.read_bytes(4);
-        let serial_number = LittleEndian::read_u32(&four_bytes);
+        // let serial_number = LittleEndian::read_u32(&four_bytes);
+        let serial_number = Decoder::get_u32(definition.architecture, &four_bytes);
         println!("Serial Number: {}", serial_number);
         let mut datum = RecordDatum::new(String::from("Serial Number"), serial_number as i64);
         data_message.push_datum(datum);
 
         four_bytes = self.read_bytes(4);
-        let time_created = LittleEndian::read_u32(&four_bytes);
+        // let time_created = LittleEndian::read_u32(&four_bytes);
+        let time_created = Decoder::get_u32(definition.architecture, &four_bytes);
         println!("Time Created: {}", time_created);
         datum = RecordDatum::new(String::from("Time Created"), time_created as i64);
         data_message.push_datum(datum);
@@ -186,15 +214,24 @@ impl Decoder {
         data_message.push_datum(datum);
 
         let mut two_bytes = self.read_bytes(2);
-        let manufacturer = LittleEndian::read_u16(&two_bytes);
+        // let manufacturer = LittleEndian::read_u16(&two_bytes);
+        let manufacturer = Decoder::get_u16(definition.architecture, &two_bytes);
         println!("Manf: {}", manufacturer);
         datum = RecordDatum::new(String::from("Manf"), manufacturer as i64);
         data_message.push_datum(datum);
 
         two_bytes = self.read_bytes(2);
-        let product = LittleEndian::read_u16(&two_bytes);
+        // let product = LittleEndian::read_u16(&two_bytes);
+        let product = Decoder::get_u16(definition.architecture, &two_bytes);
         println!("Product: {}", product);
         datum = RecordDatum::new(String::from("Product"), product as i64);
+        data_message.push_datum(datum);
+
+        two_bytes = self.read_bytes(2);
+        // let number = LittleEndian::read_u16(&two_bytes);
+        let number = Decoder::get_u16(definition.architecture, &two_bytes);
+        println!("Number: {}", number);
+        datum = RecordDatum::new(String::from("Number"), number as i64);
         data_message.push_datum(datum);
 
         let t = self.read_byte();
@@ -205,6 +242,22 @@ impl Decoder {
         println!("DataMessage: {:?}", data_message);
         
         Box::new(data_message)
+    }
+
+    fn get_u32(arch: u8, buf: &[u8]) -> u32 {
+        match arch {
+            0 => LittleEndian::read_u32(buf),
+            1 => BigEndian::read_u32(buf),
+            _ => 0
+        }
+    }
+
+    fn get_u16(arch: u8, buf: &[u8]) -> u16 {
+        match arch {
+            0 => LittleEndian::read_u16(buf),
+            1 => BigEndian::read_u16(buf),
+            _ => 0
+        }
     }
 
     fn read_u8(&mut self) -> u8 {

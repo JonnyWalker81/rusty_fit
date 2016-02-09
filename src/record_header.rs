@@ -1,5 +1,5 @@
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct RecordHeader {
     header_type: u8,
     message_type: u8,
@@ -21,5 +21,9 @@ impl RecordHeader {
 
     pub fn is_definition(&self) -> bool {
         self.message_type == 1
+    }
+
+    pub fn get_local_type(&self) -> u8 {
+        return self.local_message_type;
     }
 }
