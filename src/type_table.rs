@@ -4,10 +4,10 @@ use super::event_table::EventTable;
 use super::event_type_table::EventTypeTable;
 use std::rc::Rc;
 
-pub type TypeTableType = HashMap<u16, &'static str>;
+pub type TypeTableType = HashMap<u16, String>;
 
 pub trait TypeTableEntry {
-    fn get(&self, key: u16) -> &'static str;
+    fn get(&self, key: u16) -> String;
 }
 
 pub struct TypeTable {

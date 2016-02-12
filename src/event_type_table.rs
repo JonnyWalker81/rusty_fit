@@ -6,10 +6,10 @@ pub struct EventTypeTable {
 }
 
 impl TypeTableEntry for EventTypeTable {
-    fn get(&self, key: u16) -> &'static str {
+    fn get(&self, key: u16) -> String {
         let result = self.table.get(&key);
         match result {
-            Some(r) => r,
+            Some(r) => r.clone(),
             None => panic!("Unrecognized event_type: {}", key)
         }
     }
@@ -23,17 +23,17 @@ impl EventTypeTable {
     }
 
     fn make_table() -> TypeTableType {
-        let mut table: TypeTableType = TypeTableType::new();
-        table.insert(0, "start");
-        table.insert(1, "stop");
-        table.insert(2, "consecutive_depreciated");
-        table.insert(3, "marker");
-        table.insert(4, "stop_all");
-        table.insert(5, "begin_depreciated");
-        table.insert(6, "end_depreciated");
-        table.insert(7, "end_all_depreciated");
-        table.insert(8, "stop_disable");
-        table.insert(9, "stop_disable_all");
+        let mut table  = TypeTableType::new();
+        table.insert(0, String::from("start"));
+        table.insert(1, String::from("stop"));
+        table.insert(2, String::from("consecutive_depreciated"));
+        table.insert(3, String::from("marker"));
+        table.insert(4, String::from("stop_all"));
+        table.insert(5, String::from("begin_depreciated"));
+        table.insert(6, String::from("end_depreciated"));
+        table.insert(7, String::from("end_all_depreciated"));
+        table.insert(8, String::from("stop_disable"));
+        table.insert(9, String::from("stop_disable_all"));
 
         table
     }

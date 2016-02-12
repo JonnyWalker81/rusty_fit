@@ -14,7 +14,7 @@ pub trait FieldTableEntry {
 
 pub struct FieldTable {
     // table: HashMap<&'static str, HashMap<i32, &'static str>>
-    table: HashMap<&'static str, Rc<FieldTableEntry>>
+    table: HashMap<String, Rc<FieldTableEntry>>
 }
 
 impl FieldTable {
@@ -25,7 +25,7 @@ impl FieldTable {
     }
 
     // pub fn get(&self, key: &'static str) -> &HashMap<i32, &'static str> {
-    pub fn get(&self, key: &'static str) -> Rc<FieldTableEntry> {
+    pub fn get(&self, key: String) -> Rc<FieldTableEntry> {
         let result = self.table.get(&key);
         match result {
             Some(r) => r.clone(),
@@ -34,8 +34,8 @@ impl FieldTable {
     }
 
     // fn make_table() -> HashMap<&'static str, HashMap<i32, &'static str>> {
-    fn make_table() -> HashMap<&'static str, Rc<FieldTableEntry>> {
-        let mut table: HashMap<&'static str, Rc<FieldTableEntry>> = HashMap::new();
+    fn make_table() -> HashMap<String, Rc<FieldTableEntry>> {
+        let mut table: HashMap<String, Rc<FieldTableEntry>> = HashMap::new();
 
         // let mut file_id_table: HashMap<i32, &'static str> = HashMap::new();
         // file_id_table.insert(0, "type");
@@ -48,14 +48,14 @@ impl FieldTable {
         // table.insert("file_id", file_id_table);
 
         let file_table = Rc::new(FileIdTable::new());
-        table.insert("file_id", file_table);
+        table.insert(String::from("file_id"), file_table);
 
         // let mut file_creator_table: HashMap<i32, &'static str> = HashMap::new();
         // file_creator_table.insert(0, "software_version");
         // file_creator_table.insert(1, "hardware_version");
         // table.insert("file_creator", file_creator_table);
         let file_creator_table: Rc<FieldTableEntry> = Rc::new(FileCreatorTable::new());
-        table.insert("file_creator", file_creator_table);
+        table.insert(String::from("file_creator"), file_creator_table);
 
         // let mut event_table: HashMap<i32, &'static str> = HashMap::new();
         // event_table.insert(253, "timestamp");
@@ -73,10 +73,10 @@ impl FieldTable {
         // event_table.insert(13, "device_index");
         // table.insert("event", event_table);
         let event_table = Rc::new(EventMessageTable::new());
-        table.insert("event", event_table);
+        table.insert(String::from("event"), event_table);
 
         let device_info_table = Rc::new(DeviceInfoTable::new());
-        table.insert("device_info", device_info_table);
+        table.insert(String::from("device_info"), device_info_table);
 
         table
     }
