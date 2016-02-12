@@ -9,7 +9,7 @@ use chrono::*;
 mod decoder;
 mod fit_header;
 mod global_message_table;
-mod file_id_message;
+mod file_id_table;
 mod field_definition;
 mod fit_file;
 mod record_content;
@@ -19,6 +19,12 @@ mod definition_message;
 mod record_datum;
 mod local_type_table;
 mod field_table;
+mod type_table;
+mod event_table;
+mod file_creator_table;
+mod event_message_table;
+mod event_type_table;
+mod device_info_table;
 
 pub fn read_bin<P: AsRef<Path>>(path: P) -> Vec<u8> {
     println!("Reading .FIT File...");

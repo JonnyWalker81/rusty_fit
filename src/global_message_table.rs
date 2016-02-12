@@ -1,7 +1,19 @@
 use std::collections::HashMap;
+use super::type_table::TypeTableEntry;
 
 pub struct GlobalMessage {
     table: HashMap<u16, &'static str>
+}
+
+impl TypeTableEntry for GlobalMessage {
+    fn get(&self, key: u16) -> &'static str {
+        let result = self.table.get(&key);
+
+        match result {
+            Some(r) => return r,
+            None => panic!("Unregcognized Global Message Number: {}", key)
+        };
+    }
 }
 
 impl GlobalMessage {
@@ -12,14 +24,14 @@ impl GlobalMessage {
         }
     }
 
-    pub fn get(&self, key: u16) -> &'static str {
-        let result = self.table.get(&key);
+    // pub fn get(&self, key: u16) -> &'static str {
+    //     let result = self.table.get(&key);
 
-        match result {
-            Some(r) => return r,
-            None => panic!("Unregcognized Global Message Number: {}", key)
-        };
-    }
+    //     match result {
+    //         Some(r) => return r,
+    //         None => panic!("Unregcognized Global Message Number: {}", key)
+    //     };
+    // }
 
     fn make_global_table() -> HashMap<u16, &'static str> {
         let mut global_table = HashMap::new();

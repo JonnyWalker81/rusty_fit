@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use chrono::*;
 use super::fit_header::FitHeader;
 use super::global_message_table::GlobalMessage;
-use super::file_id_message::FileIdMessage;
+use super::file_id_table::FileIdTable;
 use super::field_definition::FieldDefinition;
 use super::fit_file::FitFile;
 use super::record_content::{RecordContent, RecordData};
@@ -17,16 +17,19 @@ use super::definition_message::DefinitionMessage;
 use super::data_message::DataMessage;
 use super::record_datum::RecordDatum;
 use super::local_type_table::LocalMessageTable;
-use super::field_table::FieldTable;
+use super::field_table::{FieldTable, FieldTableEntry};
+use super::type_table::{TypeTable, TypeTableEntry};
+use std::rc::Rc;
 
 pub struct Decoder {
     pub file_name: String,
     pub fit_buf: Vec<u8>,
     //pub header: FitHeader,
     pub global_mesage_table: GlobalMessage,
-    pub file_id_table: FileIdMessage,
+    // pub file_id_table: FileIdMessage,
     local_message_table: LocalMessageTable,
     field_table: FieldTable,
+    type_table: TypeTable,
     read_pos: u64,
 }
 
@@ -37,8 +40,9 @@ impl Decoder {
             fit_buf: Vec::new(),
             //header: FitHeader::default(),
             global_mesage_table: GlobalMessage::new(),
-            file_id_table: FileIdMessage::new(),
+            // file_id_table: FileIdMessage::new(),
             local_message_table: LocalMessageTable::new(),
+            type_table: TypeTable::new(),
             field_table: FieldTable::new(),
             read_pos: 0,
         }
@@ -57,7 +61,11 @@ impl Decoder {
     }
 
     fn decode_header(&mut self) -> FitHeader {
-        let header = self.read_header();
+        let header_size = self.fit_buf
+                              .first()
+                              .unwrap()
+                              .clone();
+        let header = self.read_header(header_size);
 
         let header_size = header[0];
 
@@ -95,12 +103,16 @@ impl Decoder {
         fit_header
     }
 
-    fn read_header(&mut self) -> Vec<u8> {
+    fn read_header(&mut self, header_size: u8) -> Vec<u8> {
         //let word0 = self.fit_buf[0];
         //let word1 = self.fit_buf[1];
 
-        let headerVec: Vec<u8> = self.fit_buf.iter().take(14).map(|b| *b).collect();
-        self.read_pos += 14;
+        let headerVec: Vec<u8> = self.fit_buf
+                                     .iter()
+                                     .take(header_size as usize)
+                                     .map(|b| *b)
+                                     .collect();
+        self.read_pos += header_size as u64;
 
         return headerVec;
     }
@@ -108,10 +120,12 @@ impl Decoder {
     fn decode_records(&mut self) -> RecordContent {
         let mut record_content = RecordContent::new();
         
-        for i in 0..3 {
+        for i in 0..8 {
             println!("Loop: {}", i);
             println!("Current Pos: {}", self.read_pos);
             self.decode_message();
+            println!("");
+            println!("");
         }
         
         record_content
@@ -132,7 +146,13 @@ impl Decoder {
         }
     }
 
+    fn get_table(&self, key: &'static str) -> Rc<TypeTableEntry> {
+        let result = self.type_table.get(&key);
+        result.clone()
+    }
+
     fn decode_definition_message(&mut self, record_header: RecordHeader) -> Box<DefinitionMessage> {
+        println!("Decoding Definition Message...");
         let mut definition_message = DefinitionMessage::new(record_header);
         self.read_u8(); // read and ignore since the next byte is reserved
         let arch = self.read_u8(); //TODO: Handle Endianess better
@@ -144,19 +164,32 @@ impl Decoder {
         println!("Global Message Number: {}", global_message_number);
         definition_message.global_message_number = global_message_number;
 
-        let global_message = self.global_mesage_table.get(global_message_number);
+        let mut global_table: Rc<TypeTableEntry> = Rc::new(GlobalMessage::new());
+        {
+            global_table = self.get_table("global");
+        }
+        let global_message = global_table.get(global_message_number);
         println!("Global Message: {}", global_message);
 
         let num_fields = self.read_u8();
         println!("Number of Fields: {}", num_fields);
         definition_message.number_of_fields = num_fields;
 
+        // let global_message = self.global_mesage_table.get(global_message_number);
+        let global_message = global_table.get(global_message_number);
+        // let mut message_mapping: HashMap<i32, &'static str> = HashMap::new();
+        let mut message_mapping: Rc<FieldTableEntry> = Rc::new(FileIdTable::new());
+        {
+            message_mapping = self.field_table.get(global_message);
+        }
+
         for f in 0..num_fields {
             let field_def_num = self.read_u8();
             let size = self.read_u8();
             let base_type = self.read_u8();
 
-            let field_kind = self.file_id_table.get(field_def_num);
+            let key = field_def_num as i32;
+            let field_kind = message_mapping.get(key);
 
             let field_definition = FieldDefinition::new(field_def_num, size, base_type);
             definition_message.fields.push(field_definition);
@@ -173,6 +206,7 @@ impl Decoder {
     }
 
     fn decode_data_message(&mut self, record_header: RecordHeader) -> Box<DataMessage> {
+        println!("Decoding Data Message...");
         //TODO: Handle pos better
         // let data_header = self.read_u8();
         // println!("{:#b}", data_header);
@@ -182,18 +216,25 @@ impl Decoder {
         let definition = self.local_message_table.get(local_type);
 
         let global_number = definition.global_message_number;
-        let global_message = self.global_mesage_table.get(global_number);
-        let mut message_mapping: HashMap<i32, &'static str> = HashMap::new();
+        // let global_message = self.global_mesage_table.get(global_number);
+        // TODO: Figure out best way to handle this to make borrow cheker happy
+        let mut global_table: Rc<TypeTableEntry> = Rc::new(GlobalMessage::new());
+        {
+            global_table = self.get_table("global");
+        }
+        let global_message = global_table.get(global_number);
+        // let mut message_mapping: HashMap<i32, &'static str> = HashMap::new();
+        let mut message_mapping: Rc<FieldTableEntry> = Rc::new(FileIdTable::new());
         {
             println!("Global Message: {}", global_message);
-        message_mapping = self.field_table.get(global_message).clone();
+            message_mapping = self.field_table.get(global_message);
         }
         println!("Def: {:?}", definition);
         for f in definition.fields {
             let key = f.field_number as i32;
-            println!("Key: {}", key);
-            println!("Message Mapping: {:?}", message_mapping);
-            let field_name = message_mapping.get(&key).unwrap();
+            // println!("Key: {}", key);
+            // println!("Message Mapping: {:?}", message_mapping);
+            let field_name = message_mapping.get(key);
             println!("{}", field_name);
             let read_result = match f.size {
                 1 => self.read_byte() as u32,
@@ -225,7 +266,7 @@ impl Decoder {
         datum = RecordDatum::new(String::from("Time Created"), time_created as i64);
         data_message.push_datum(datum);
 
-        let d = UTC.ymd(1989, 12, 31).and_hms(12, 0, 0);
+        let d = UTC.ymd(1989, 12, 31).and_hms(0, 0, 0);
         let sum = d + Duration::seconds(time_created as i64);
         println!("Date: {}", sum);
         datum = RecordDatum::new(String::from("Date"), sum.timestamp());
