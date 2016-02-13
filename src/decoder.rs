@@ -120,7 +120,7 @@ impl Decoder {
     fn decode_records(&mut self) -> RecordContent {
         let mut record_content = RecordContent::new();
         
-        for i in 0..13 {
+        for i in 0..12 {
             println!("Loop: {}", i);
             println!("Current Pos: {}", self.read_pos);
             self.decode_message();
