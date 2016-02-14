@@ -5,6 +5,7 @@ use super::file_creator_table::FileCreatorTable;
 use super::event_message_table::EventMessageTable;
 use super::event_type_table::EventTypeTable;
 use super::device_info_table::DeviceInfoTable;
+use super::field_table_placeholder::FieldTablePlaceholder;
 
 pub type FieldTableType = HashMap<i32, String>;
 
@@ -29,7 +30,7 @@ impl FieldTable {
         let result = self.table.get(&key);
         match result {
             Some(r) => r.clone(),
-            None => panic!("Unable to get field in table: {}", key)
+            None => Rc::new(FieldTablePlaceholder::new())
         }
     }
 

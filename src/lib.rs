@@ -25,6 +25,7 @@ mod file_creator_table;
 mod event_message_table;
 mod event_type_table;
 mod device_info_table;
+mod field_table_placeholder;
 
 pub fn read_bin<P: AsRef<Path>>(path: P) -> Vec<u8> {
     println!("Reading .FIT File...");
